@@ -7,41 +7,39 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import test.registry.ServiceRegistry;
 import test.rpc.handler.RpcServerHandler;
 import test.rpc.service.RpcService;
 
 import javax.annotation.PostConstruct;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class RpcServer implements ApplicationContextAware, InitializingBean {
     // 维护interfaceName - serviceBean
-    private static Map<String, Object> services = new HashMap<>();
+    private static Map<String, Object> services = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
-
     @PostConstruct
-    public void init() {
-        Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(RpcService.class);
-        if (MapUtils.isNotEmpty(beansWithAnnotation)) {
-            for (String name : beansWithAnnotation.keySet()) {
-                RpcService o = (RpcService) beansWithAnnotation.get(name);
-                services.put(o.interfaceClass().getName(), o);
-            }
-        }
+    public void init(){
     }
 
-    // afterPropertiesSet() -> @postConstruct
+    // afterPropertiesSet()
     @Override
     public void afterPropertiesSet() throws Exception {
         NioEventLoopGroup boss = new NioEventLoopGroup();
