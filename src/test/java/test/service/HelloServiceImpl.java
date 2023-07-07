@@ -1,6 +1,6 @@
 package test.service;
 
-import test.rpc.service.RpcService;
+import test.rpc.annotations.RpcService;
 // 代替手动配置
 @RpcService(interfaceClass = HelloService.class)
 public class HelloServiceImpl implements HelloService {

@@ -1,15 +1,19 @@
 package test.registry;
 
-import org.apache.curator.framework.CuratorFramework;
 import test.util.CuratorUtil;
 
-import java.net.InetSocketAddress;
+import java.util.List;
 
-public class ZkServiceRegistryImpl implements ServiceRegistry {
+public class ZkServiceRegistryImpl implements ServiceRegistry, ServiceDiscovery {
+
     @Override
     public void register(String rpcServiceName, String address) {
         String servicePath = CuratorUtil.PREFIX + "/" + rpcServiceName;
-        CuratorFramework zkClient = CuratorUtil.getZkClient();
-        CuratorUtil.createPersistentNode(servicePath, zkClient);
+        CuratorUtil.createPersistentNode(servicePath, address);
+    }
+
+    @Override
+    public List<String> getServices(String rpcServiceName) {
+        return CuratorUtil.getServiceAddresses(rpcServiceName);
     }
 }

@@ -7,21 +7,16 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import test.registry.ServiceRegistry;
 import test.rpc.handler.RpcServerHandler;
-import test.rpc.service.RpcService;
+import test.rpc.annotations.RpcService;
 
 import javax.annotation.PostConstruct;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,8 +30,18 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
+
     @PostConstruct
-    public void init(){
+    public void init() {
+        Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(RpcService.class);
+        for (String key : beansWithAnnotation.keySet()) {
+            RpcService o = (RpcService) beansWithAnnotation.get(key);
+            services.put(o.interfaceClass().getName(), o);
+        }
+    }
+
+    public static Map<String, Object> getServices() {
+        return services;
     }
 
     // afterPropertiesSet()
@@ -52,9 +57,13 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
                     .childHandler(new ChannelInitializer<NioSocketChannel>() {
                         @Override
                         protected void initChannel(NioSocketChannel ch) throws Exception {
-                            // 解决黏包
+                            // 心跳机制
+                            // 会触发 IdleStateEvent 事件并且交给下一个 handler 处理，
+                            // 下一个 handler 必须实现 userEventTriggered 方法处理对应事件
+                            ch.pipeline().addLast(new IdleStateHandler(60, 0, 0));
+                            // 解决黏包 <header> -> <length> -> <data>
                             ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024, 12, 4));
-                            // message codec
+                            // bytebuf <-> message codec
                             // rpc request handler
                             ch.pipeline().addLast(new RpcServerHandler());
                         }

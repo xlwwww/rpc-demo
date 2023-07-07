@@ -8,9 +8,7 @@ import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
 
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -18,18 +16,22 @@ import java.util.concurrent.TimeUnit;
 public class CuratorUtil {
     private static CuratorFramework zkClient;
     private static final String DEFAULT_ZOOKEEPER_ADDRESS = "127.0.0.1:2181";
-    public static final String PREFIX = "/rpc-demo";
-    private static final Set<String> REGISTERED_PATH_SET = ConcurrentHashMap.newKeySet();
+    public static final String PREFIX = "/rpc";
 
-    public static void createPersistentNode(String path, CuratorFramework zkClient) {
+    public static List<String> getServiceAddresses(String path) {
         try {
-            if (REGISTERED_PATH_SET.contains(path) || zkClient.checkExists().forPath(path) != null) {
-                log.info("The node already exists. The node is:[{}]", path);
-            } else {
-                zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(path);
-                log.info("The node was created successfully. The node is:[{}]", path);
-            }
-            REGISTERED_PATH_SET.add(path);
+            CuratorFramework zkClient = getZkClient();
+            return zkClient.getChildren().forPath(PREFIX + path);
+        } catch (Exception e) {
+            log.error("GET persistent node for path [{}] fail", path);
+        }
+        return new ArrayList<>();
+    }
+
+    public static void createPersistentNode(String path, String address) {
+        try {
+            CuratorFramework zkClient = getZkClient();
+            zkClient.create().creatingParentsIfNeeded().forPath(PREFIX + path + "/" + address);
         } catch (Exception e) {
             log.error("create persistent node for path [{}] fail", path);
         }
@@ -44,14 +46,13 @@ public class CuratorUtil {
         }
         // Retry strategy. Retry 3 times, and will increase the sleep time between retries.
         RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
-        CuratorFramework client =
-                CuratorFrameworkFactory.newClient(
+        zkClient = CuratorFrameworkFactory.newClient(
                         zookeeperAddress,
                         5000,
                         3000,
                         retryPolicy);
-        zkClient.start();
         try {
+            zkClient.start();
             // wait 30s until connect to the zookeeper
             if (!zkClient.blockUntilConnected(30, TimeUnit.SECONDS)) {
                 throw new RuntimeException("Time out waiting to connect to ZK!");
