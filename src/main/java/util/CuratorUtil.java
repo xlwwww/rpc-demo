@@ -1,4 +1,4 @@
-package rpc.util;
+package util;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.RetryPolicy;
@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 public class CuratorUtil {
     private static CuratorFramework zkClient;
     private static final String DEFAULT_ZOOKEEPER_ADDRESS = "127.0.0.1:2181";
-    public static final String PREFIX = "/rpc";
+    public static final String PREFIX = "/rpc/";
 
     public static List<String> getServiceAddresses(String path) {
         try {

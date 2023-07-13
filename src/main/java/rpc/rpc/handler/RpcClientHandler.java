@@ -1,27 +1,35 @@
 package rpc.rpc.handler;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
+
+import lombok.extern.slf4j.Slf4j;
+
 import rpc.rpc.msg.RpcRequest;
 import rpc.rpc.msg.RpcResponse;
-import rpc.client.connect.RpcFuture;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
-    private static Map<String, RpcFuture> requestFutureMap = new ConcurrentHashMap<>();
+    private static Map<String, CompletableFuture<Object>> requestFutureMap = new ConcurrentHashMap<>();
 
     private Channel channel;
 
     @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        log.info("client address = ", ctx.channel());
+        super.channelActive(ctx);
+    }
+
+    @Override
     protected void channelRead0(ChannelHandlerContext ctx, RpcResponse msg) throws Exception {
         String requestId = msg.getRequestId();
-        RpcFuture rpcFuture = requestFutureMap.get(requestId);
-        if (rpcFuture != null) {
+        CompletableFuture<Object> rpcResponseCompletableFuture = requestFutureMap.get(requestId);
+        if (rpcResponseCompletableFuture != null) {
             requestFutureMap.remove(requestId);
-            rpcFuture.done(msg);
+            rpcResponseCompletableFuture.complete(msg.getResult());
         }
     }
 
@@ -30,11 +38,10 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
         this.channel = ctx.channel();
     }
 
-    public RpcFuture sendRequest(RpcRequest request) {
+    public CompletableFuture sendRequest(RpcRequest request) {
         // 包装
-        RpcFuture future = new RpcFuture();
+        CompletableFuture<Object> future = new CompletableFuture<>();
         requestFutureMap.put(request.getRequestId(), future);
-        future.setId(request.getRequestId());
         channel.writeAndFlush(request);
         return future;
     }

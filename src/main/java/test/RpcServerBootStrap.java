@@ -1,4 +1,4 @@
-package rpc.test;
+package test;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 

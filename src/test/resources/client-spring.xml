@@ -11,8 +11,7 @@
     <context:component-scan base-package="test" />
 
     <bean id="rpcServer" class="rpc.rpc.RpcServer">
-        <constructor-arg name="serverAddress" value="${server.address}"/>
-        <constructor-arg name="registryAddress" value="${server.address}"/>
+        <constructor-arg name="serverAddress" index="0" value="${server.address}"/>
     </bean>
 
 </beans>

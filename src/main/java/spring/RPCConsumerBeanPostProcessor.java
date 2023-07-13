@@ -1,9 +1,10 @@
-package rpc.spring;
+package spring;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import rpc.client.RpcClientProxyManager;
+import rpc.client.RpcClient;
+import rpc.client.RpcProxy;
 import rpc.rpc.annotations.RpcReference;
 
 import java.lang.reflect.Field;
@@ -21,7 +22,7 @@ public class RPCConsumerBeanPostProcessor implements BeanPostProcessor {
             }
             try {
                 // 注入
-                field.set(bean, RpcClientProxyManager.create(bean.getClass()));
+                field.set(bean, RpcProxy.create(bean.getClass(), new RpcClient()));
                 field.setAccessible(true);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();

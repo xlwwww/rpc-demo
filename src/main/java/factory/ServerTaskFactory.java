@@ -1,4 +1,4 @@
-package rpc.factory;
+package factory;
 
 import rpc.rpc.task.ServerTaskRunner;
 import rpc.rpc.task.ServerTaskRunnerImpl;

@@ -1,4 +1,4 @@
-package rpc.test.example;
+package test.example;
 
 
 public interface HelloService {

@@ -1,4 +1,4 @@
-package rpc.test.example;
+package test.example;
 
 import rpc.rpc.annotations.RpcService;
 // 代替手动配置

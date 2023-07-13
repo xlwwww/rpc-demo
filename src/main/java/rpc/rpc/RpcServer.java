@@ -1,5 +1,7 @@
 package rpc.rpc;
 
+import codec.RpcDecoder;
+import codec.RpcEncoder;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -8,15 +10,22 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
+import factory.SingletonFactory;
+import rpc.registry.ServiceRegistry;
+import rpc.registry.ZkServiceRegistryImpl;
 import rpc.rpc.handler.RpcServerHandler;
 import rpc.rpc.annotations.RpcService;
+import rpc.rpc.msg.RpcRequest;
+import serializer.HessianSerializer;
+import serializer.Serializer;
 
 import javax.annotation.PostConstruct;
 import java.util.Map;
@@ -33,24 +42,16 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
         this.serverAddress = serverAddress;
     }
 
-    public String getRegistryAddress() {
-        return registryAddress;
-    }
-
-    public void setRegistryAddress(String registryAddress) {
-        this.registryAddress = registryAddress;
-    }
-
     private String serverAddress;
-    private String registryAddress;
+    private ServiceRegistry serviceRegistry;
 
     // 维护interfaceName - serviceBean
-    private static Map<String, Object> services = new ConcurrentHashMap<>();
+    private static final Map<String, Object> services = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
 
-    public RpcServer(String serverAddress, String registryAddress) {
+    public RpcServer(String serverAddress) {
         this.serverAddress = serverAddress;
-        this.registryAddress = registryAddress;
+        this.serviceRegistry = new ZkServiceRegistryImpl();
     }
 
     @Override
@@ -64,6 +65,12 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
         for (Object o : beansWithAnnotation.values()) {
             RpcService rpcService = o.getClass().getAnnotation(RpcService.class);
             services.put(rpcService.interfaceClass().getName(), o);
+            // 服务注册
+            try {
+                serviceRegistry.register(rpcService.interfaceClass().getName(), serverAddress);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -80,6 +87,7 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
         }
         NioEventLoopGroup boss = new NioEventLoopGroup();
         NioEventLoopGroup worker = new NioEventLoopGroup();
+        Serializer serializer = SingletonFactory.getInstance(HessianSerializer.class);
         // 开启服务器
         try {
             ServerBootstrap serverBootstrap = new ServerBootstrap()
@@ -92,10 +100,13 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
                             // 心跳机制
                             // 会触发 IdleStateEvent 事件并且交给下一个 handler 处理，
                             // 下一个 handler 必须实现 userEventTriggered 方法处理对应事件
-                            ch.pipeline().addLast(new IdleStateHandler(60, 0, 0));
+                            // ch.pipeline().addLast(new IdleStateHandler(60, 0, 0));
+                            ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                             // 解决黏包 <header> -> <length> -> <data>
-                            ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024, 12, 4));
+                            ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65536, 0, 4));
                             // bytebuf <-> message codec
+                            ch.pipeline().addLast(new RpcDecoder(serializer, RpcRequest.class));
+                            ch.pipeline().addLast(new RpcEncoder(serializer));
                             // rpc request handler
                             ch.pipeline().addLast(new RpcServerHandler());
                         }

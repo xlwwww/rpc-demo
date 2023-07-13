@@ -1,17 +1,14 @@
 package rpc.client;
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.lang.reflect.Proxy;
 
-@Slf4j
-public class RpcClientProxyManager {
+public class RpcProxy {
     /**
      * 使用： xxxservice. xxx  -> 实际是 proxy.sendRequest
      */
-    public static <T> T create(Class<T> clazz) {
+    public static <T> T create(Class<T> clazz, RpcClient client) {
         return (T) Proxy.newProxyInstance(clazz.getClassLoader(),
                 new Class[]{clazz},
-                new ObjectProxy());
+                new ObjectProxy(client));
     }
 }

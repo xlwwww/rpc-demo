@@ -19,15 +19,22 @@ public class ServerTaskRunnerImpl implements ServerTaskRunner {
     @Override
     public void submit(ChannelHandlerContext ctx, RpcRequest request) {
         executorService.submit(() -> {
-            RpcService o = (RpcService) RpcServer.getServices().get(request.getInterfaceName());
+            Object o = RpcServer.getServices().get(request.getInterfaceName());
             try {
-                Method method = o.interfaceClass().getMethod(request.getMethodName(), request.getParameterTypes());
+                Method method = o.getClass().getMethod(request.getMethodName(), request.getParameterTypes());
                 Object result = method.invoke(o, request.getParameters());
                 // write rpc response
-                ctx.writeAndFlush(new RpcResponse(result));
+                ctx.writeAndFlush(new RpcResponse(request.getRequestId(), result))
+                        .addListener(future -> {
+                            if (future.isSuccess()) {
+                                log.info("successfully write rpc response,channel ={}", ctx.channel().toString());
+                            } else {
+                                log.error("write rpc response failed,channel = {},e ={}", ctx.channel().toString(),future.cause());
+                            }
+                        });
             } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
                 e.printStackTrace();
-                ctx.writeAndFlush(new RpcResponse(e));
+                ctx.writeAndFlush(new RpcResponse(request.getRequestId(), e));
             }
         });
     }

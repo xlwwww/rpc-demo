@@ -1,6 +1,8 @@
 package rpc.rpc.msg;
 
-public class RpcRequest {
+import java.io.Serializable;
+
+public class RpcRequest implements Serializable {
 
     private String requestId; // 请求的Id, 唯一标识该请求
     private String interfaceName; // 接口名称

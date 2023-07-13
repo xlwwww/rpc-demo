@@ -1,4 +1,4 @@
-package rpc.config;
+package config;
 
 import lombok.Builder;
 import lombok.Data;

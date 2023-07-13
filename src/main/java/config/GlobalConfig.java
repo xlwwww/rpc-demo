@@ -1,4 +1,4 @@
-package rpc.config;
+package config;
 
 public class GlobalConfig {
 

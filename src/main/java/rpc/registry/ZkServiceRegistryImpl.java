@@ -1,6 +1,6 @@
 package rpc.registry;
 
-import rpc.util.CuratorUtil;
+import util.CuratorUtil;
 
 import java.util.List;
 

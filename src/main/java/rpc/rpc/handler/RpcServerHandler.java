@@ -5,7 +5,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 import rpc.rpc.msg.RpcRequest;
-import rpc.factory.ServerTaskFactory;
+import factory.ServerTaskFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -15,11 +15,17 @@ public class RpcServerHandler extends SimpleChannelInboundHandler<RpcRequest> {
     public static final int HEART_BEAT_TIME_OUT_MAX_TIME = 3;
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        log.info("连接断开:" + ctx.channel().remoteAddress());
+    }
+
+    @Override
     protected void channelRead0(ChannelHandlerContext ctx, RpcRequest msg) throws Exception {
         log.info("received msg");
         // reset 心跳
         idleCount.set(0);
         // 取handler处理，这里是io线程，切换业务线程
+        // todo 优化 一个server对应一个taskPool
         ServerTaskFactory.getServerTaskRunner().submit(ctx, msg);
     }
 

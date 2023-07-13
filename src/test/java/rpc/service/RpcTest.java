@@ -7,17 +7,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import rpc.client.connect.ConnectionManager;
-import rpc.client.connect.RpcFuture;
+import rpc.client.RpcClient;
 import rpc.lb.LoadBalancerRR;
 import rpc.registry.ZkServiceRegistryImpl;
-import rpc.rpc.handler.RpcClientHandler;
 import rpc.rpc.msg.RpcRequest;
-import rpc.test.example.HelloService;
+import test.example.HelloService;
 
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -42,7 +41,7 @@ public class RpcTest {
 
     @Test
     public void testConnectNode() throws InterruptedException, NoSuchMethodException, ExecutionException {
-        RpcClientHandler rpcClientHandler = ConnectionManager.connectNode(HelloService.class);
+        RpcClient client = new RpcClient();
         // 发送请求
         RpcRequest request = new RpcRequest();
         request.setRequestId(UUID.randomUUID().toString());
@@ -51,8 +50,8 @@ public class RpcTest {
         request.setMethodName(hello.getName());
         request.setParameterTypes(hello.getParameterTypes());
         request.setParameters(new Object[]{"WANGXINLU"});
-        RpcFuture rpcFuture = rpcClientHandler.sendRequest(request);
-        System.out.println(rpcFuture.get());
+        CompletableFuture completableFuture = client.sendRequest(request);
+        System.out.println(completableFuture.get());
     }
 
 }
