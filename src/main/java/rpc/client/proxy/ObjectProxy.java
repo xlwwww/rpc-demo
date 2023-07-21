@@ -1,12 +1,13 @@
-package rpc.client;
+package rpc.client.proxy;
 
+import rpc.client.RpcClient;
+import rpc.client.RpcContext;
+import rpc.future.RpcFuture;
 import rpc.rpc.msg.RpcRequest;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class ObjectProxy implements InvocationHandler {
     private final RpcClient client;
@@ -24,8 +25,7 @@ public class ObjectProxy implements InvocationHandler {
         request.setMethodName(method.getName());
         request.setParameterTypes(method.getParameterTypes());
         request.setParameters(args);
-        CompletableFuture rpcFuture = client.sendRequest(request);
-        return rpcFuture.get();
+        return client.getInvokeStrategy().invoke(request, client.getConfig().getMethodCallback());
     }
 
 }

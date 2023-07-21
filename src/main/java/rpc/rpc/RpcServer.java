@@ -12,6 +12,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
@@ -93,6 +94,7 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
             ServerBootstrap serverBootstrap = new ServerBootstrap()
                     .group(boss, worker)
                     .option(ChannelOption.SO_BACKLOG, 128)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<NioSocketChannel>() {
                         @Override
@@ -100,7 +102,7 @@ public class RpcServer implements ApplicationContextAware, InitializingBean {
                             // 心跳机制
                             // 会触发 IdleStateEvent 事件并且交给下一个 handler 处理，
                             // 下一个 handler 必须实现 userEventTriggered 方法处理对应事件
-                            // ch.pipeline().addLast(new IdleStateHandler(60, 0, 0));
+                            ch.pipeline().addLast(new IdleStateHandler(60, 0, 0));
                             ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                             // 解决黏包 <header> -> <length> -> <data>
                             ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65536, 0, 4));

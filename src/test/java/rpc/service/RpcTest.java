@@ -1,5 +1,6 @@
 package rpc.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -8,17 +9,20 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import rpc.client.RpcClient;
+import rpc.client.config.RpcConfig;
+import rpc.future.RpcFuture;
 import rpc.lb.LoadBalancerRR;
 import rpc.registry.ZkServiceRegistryImpl;
+import rpc.callback.MethodCallback;
 import rpc.rpc.msg.RpcRequest;
 import test.example.HelloService;
 
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+@Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration({"classpath:client-spring.xml"})
 public class RpcTest {
@@ -41,7 +45,21 @@ public class RpcTest {
 
     @Test
     public void testConnectNode() throws InterruptedException, NoSuchMethodException, ExecutionException {
-        RpcClient client = new RpcClient();
+        RpcConfig config =
+                RpcConfig.builder()
+                        .methodCallback(new MethodCallback<Object>() {
+                            @Override
+                            public void onComplete(Object o) {
+                                log.info("method complete,o={}", o);
+                            }
+
+                            @Override
+                            public void onError(Throwable throwable) {
+                                log.error("method error,e=", throwable);
+                            }
+                        })
+                        .build();
+        RpcClient client = new RpcClient(config);
         // 发送请求
         RpcRequest request = new RpcRequest();
         request.setRequestId(UUID.randomUUID().toString());
@@ -50,8 +68,8 @@ public class RpcTest {
         request.setMethodName(hello.getName());
         request.setParameterTypes(hello.getParameterTypes());
         request.setParameters(new Object[]{"WANGXINLU"});
-        CompletableFuture completableFuture = client.sendRequest(request);
-        System.out.println(completableFuture.get());
+        RpcFuture rpcFuture = client.sendRequest(request);
+        System.out.println(rpcFuture.get());
     }
 
 }

@@ -21,6 +21,12 @@ public class ServerTaskRunnerImpl implements ServerTaskRunner {
         executorService.submit(() -> {
             Object o = RpcServer.getServices().get(request.getInterfaceName());
             try {
+                log.info("处理业务逻辑，request = {}", request.getRequestId());
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 Method method = o.getClass().getMethod(request.getMethodName(), request.getParameterTypes());
                 Object result = method.invoke(o, request.getParameters());
                 // write rpc response
@@ -29,7 +35,7 @@ public class ServerTaskRunnerImpl implements ServerTaskRunner {
                             if (future.isSuccess()) {
                                 log.info("successfully write rpc response,channel ={}", ctx.channel().toString());
                             } else {
-                                log.error("write rpc response failed,channel = {},e ={}", ctx.channel().toString(),future.cause());
+                                log.error("write rpc response failed,channel = {},e ={}", ctx.channel().toString(), future.cause());
                             }
                         });
             } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
